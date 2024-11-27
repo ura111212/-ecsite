@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html xmlns:th="www.thymeleaf.org">
+<head>
+<meta charset="UTF-8">
+<link href="/css/style.css" rel="stylesheet"/>
+<title>Insert title here</title>
+
+<script>
+  /*
+  * 画面表示時（onLoad）に動作する処理群
+  */
+  document.addEventListener("DOMContentLoaded", event => {
+    
+    // 商品情報の「削除」ボタンをすべて抽出し、deleteBtns に格納する
+    const deleteBtns = document.querySelectorAll(".deleteBtn");
+    //↑querySelectorAllによりすべてのボタンを配列として取得
+    
+    //deleteBtns をループさせ、すべてのボタンにイベントリスナを追加する
+    deleteBtns.forEach(btn => {
+      //"click" イベントが発火した際 無名関数を呼び出すよう設定する
+      btn.addEventListener("click", event =>{
+        let isOK = confirm("削除してもよろしいですか？");
+      if ( !isOK ) { return; }
+      
+      //event.target(削除ボタン)の親要素のさらに親要素から、"td"要素をすべて抽出し、tdListに格納する
+      const tdList = event.target.parentElement.parentElement.querySelectorAll("td");
+      // deleteGoods 関数を呼び出し、商品情報を削除する
+      deleteGoods(tdList);
+      });
+    });
+  });
+  
+  /*
+  * deleteGoods関数
+  * 「削除」ボタンのclickイベントにより呼び戻される
+  */
+  function deleteGoods(tdList) {
+    // JavaにPOST送信するオブジェクトを取得：設定する
+    const postObj = { "id": tdList.item(0).innerText };
+    
+    /*
+     * fetch API を使用し、Javaと非同期通信(POST)を行う
+     * SUCCESS時(then): 削除処理完了のアラートを表示し、画面上の商品情報行を削除する。
+     * ERROR時(catch): エラー情報を console に出力する
+     */
+    fetch("/ecsite/admin/api/deleteGoods", {  //fetch関数の第一引数に設定される文字列が、通信先のURL。このURLでマッピングされているJava側メソッドが呼び出される。
+    
+      method: "POST" , //規定ではGETリクエストを使うが、methodオプションを使うとリクエストメソッドを変更できる
+      
+      headers: { 'Content-Type': "application/json" },
+      
+      body: JSON.stringify(postObj), //bodyオプションはクライアントがサーバに送るもの(リクエストの本体)。
+      // JSON.stringifyメソッドにより、送信するJavascriptデータをJSON形式文字列に変換している。
+    })
+    .then(response => response.text())
+    .then(result => {  //fetch関数によってJava側(AdminControllerのdeleteApiメソッド)と通信して結果(今回の場合は"1" or "-1")がthen関数の引数に自動的にセットされる。
+      alert(`商品 [ ${tdList.item(1).innerText} ] を削除しました。`);//メッセージは「`」バッククオーテーションで囲む
+      //Javascriptでは、バッククオーテーションで囲んだ文字列の中に変数をそのまま記述できる。(""+""で分けなくていい)
+      tdList.item(0).parentElement.remove();
+    })
+    .catch(error => {
+      console.error("Error: ", error);
+    });
+  }
+</script>
+
+</head>
+<body>
+  
+  <header>
+    <h1>EC Site -- 管理者ページ</h1>
+  </header>
+  
+  <table id="adminTable">
+    <thead>
+      <tr>
+        <th>ID</th><th>商品名</th><th>価格</th><th>削除</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr th:each="item: ${goods}">
+        <td th:text="${item.id}"/> <!--thymeleafを使う時は閉じタグ分けない-->
+        <td th:text="${item.goodsName}"/>
+        <td th:text="${item.price}"/>
+        <td><button type="submit" class="deleteBtn">削除</button></td>
+      </tr>
+    </tbody>
+  </table>
+  
+  <form name="goodsForm" id="adminPage" method="post" action="/ecsite/admin/goodsMst">
+    
+    <button type="submit" th:if="${userName!=null}">新規商品追加</button>
+    <input type="hidden" name="userName" th:value="${userName}"/>
+    <input type="hidden" name="password" th:value="${password}"/>
+    
+  </form>
+
+</body>
+</html>
